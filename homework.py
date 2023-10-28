@@ -140,7 +140,7 @@ def main():
         logger.critical(error_message)
         sys.exit(error_message)
     bot = telegram.Bot(token=TELEGRAM_TOKEN)
-    timestamp = 0  # int(time.time())
+    timestamp = int(time.time())
     previous_message = ''
     while True:
         try:
