@@ -6,8 +6,8 @@ import os
 import sys
 import exceptions
 
-# from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
 from http import HTTPStatus
+from typing import Dict, Union
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -44,12 +44,12 @@ def check_tokens():
     Если отсутствуют переменные окружения,
     сообщаем их имена, при этом бот завершает работу.
     """
-    tokens = {'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
-              'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
-              'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID}
+    tokens: Dict[str, Union[str, int]] = {'PRACTICUM_TOKEN': PRACTICUM_TOKEN,
+                                          'TELEGRAM_TOKEN': TELEGRAM_TOKEN,
+                                          'TELEGRAM_CHAT_ID': TELEGRAM_CHAT_ID}
     empty_tokens = [name for name, value in tokens.items() if not value]
+    error = f'Не все токены указаны корректно: {empty_tokens}'
     if empty_tokens:
-        error = f'Не все токены указаны корректно: {", ".join(empty_tokens)}'
         logger.critical(error)
         raise ValueError(error)
 
@@ -64,7 +64,7 @@ def send_message(bot, message):
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
     except telegram.error.TelegramError as error:
-        raise f'Ошибка при отправке сообщения: {error}'
+        raise RuntimeError(f'Ошибка при отправке сообщения: {error}')
     logger.debug(f'Сообщение {message} отправлено')
 
 
@@ -81,17 +81,17 @@ def get_api_answer(timestamp):
                                 headers=HEADERS,
                                 params=params
                                 )
-        if response.status_code != HTTPStatus.OK:
-            raise requests.HTTPError(
-                f'Ошибка API-сервиса. - '
-                f'Адрес запроса {ENDPOINT} - '
-                f'Параметры запроса {params} - '
-                f'Код ответа: {response.status_code} - '
-                f'Тело ответа: {response.content}'
-            )
-    except Exception:
+    except Exception as error:
         raise exceptions.ServiceUnavailable(
             'Ошибка при запросе к основному API'
+        ) from error
+    if response.status_code != HTTPStatus.OK:
+        raise requests.HTTPError(
+            f'Ошибка API-сервиса. - '
+            f'Адрес запроса {ENDPOINT} - '
+            f'Параметры запроса {params} - '
+            f'Код ответа: {response.status_code} - '
+            f'Тело ответа: {response.content}'
         )
     return response.json()
 
